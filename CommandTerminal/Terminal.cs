@@ -23,7 +23,7 @@ namespace CommandTerminal
         [Range(0, 1)]
         float SmallTerminalRatio = 0.33f;
 
-        [Range(100, 1000)]
+        [Range(100, 2500)]
         [SerializeField]
         float ToggleSpeed = 360;
 
@@ -267,6 +267,10 @@ namespace CommandTerminal
 
             GUILayout.BeginHorizontal();
 
+            if (GUILayout.Button("[lua vm]", input_style, GUILayout.Width(Screen.width / 10))) {
+                Debug.Log("lua vm");
+            }
+
             if (InputCaret != "") {
                 GUILayout.Label(InputCaret, input_style, GUILayout.Width(ConsoleFont.fontSize));
             }
@@ -284,7 +288,7 @@ namespace CommandTerminal
                 initial_open = false;
             }
 
-            if (ShowGUIButtons && GUILayout.Button("| run", input_style, GUILayout.Width(Screen.width / 10))) {
+            if (ShowGUIButtons && GUILayout.Button("[run]", input_style, GUILayout.Width(Screen.width / 10))) {
                 EnterCommand();
             }
 
