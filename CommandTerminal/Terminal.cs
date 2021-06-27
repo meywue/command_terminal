@@ -5,6 +5,12 @@ using UnityEngine.Assertions;
 
 namespace CommandTerminal
 {
+    public enum Domain
+    {
+        Engine,
+        LuaVM
+    }
+
     public enum TerminalState
     {
         Close,
@@ -51,6 +57,7 @@ namespace CommandTerminal
         [SerializeField] Color ErrorColor         = Color.red;
 
         TerminalState state;
+        Domain domain;
         TextEditor editor_state;
         bool input_fix;
         bool move_cursor;
@@ -267,8 +274,8 @@ namespace CommandTerminal
 
             GUILayout.BeginHorizontal();
 
-            if (GUILayout.Button("[lua vm]", input_style, GUILayout.Width(Screen.width / 10))) {
-                Debug.Log("lua vm");
+            if (GUILayout.Button(domain == Domain.Engine ? "[c#]" : "[lua]", input_style, GUILayout.Width(Screen.width / 10))) {
+                domain = domain == Domain.Engine ? Domain.LuaVM : Domain.Engine;
             }
 
             if (InputCaret != "") {
@@ -342,8 +349,13 @@ namespace CommandTerminal
         }
 
         void EnterCommand() {
-            Log(TerminalLogType.Input, "{0}", command_text);
-            Shell.RunCommand(command_text);
+            Log(TerminalLogType.Input, "{0} | {1}", domain == Domain.Engine ? "c#" : "lua", command_text);
+            if (domain == Domain.Engine) {
+                Shell.RunCommand(command_text);
+            }
+            else if (domain == Domain.LuaVM) {
+                Log($"Lua: {command_text}");
+            }
             History.Push(command_text);
 
             if (IssuedError) {
