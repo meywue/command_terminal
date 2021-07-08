@@ -1,14 +1,22 @@
 using UnityEngine;
 using System.Text;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine.Assertions;
+using UnityEngine.Events;
 
 namespace CommandTerminal
 {
-    public enum Domain
+    public struct Domain
     {
-        Engine,
-        LuaVM
+        public string identifier;
+        public UnityAction<string> command;
+
+        public Domain(string identifier, UnityAction<string> command)
+        {
+            this.identifier = identifier;
+            this.command = command;
+        }
     }
 
     public enum TerminalState
@@ -57,7 +65,6 @@ namespace CommandTerminal
         [SerializeField] Color ErrorColor         = Color.red;
 
         TerminalState state;
-        Domain domain;
         TextEditor editor_state;
         bool input_fix;
         bool move_cursor;
@@ -79,6 +86,9 @@ namespace CommandTerminal
         public static CommandShell Shell { get; private set; }
         public static CommandHistory History { get; private set; }
         public static CommandAutocomplete Autocomplete { get; private set; }
+
+        List<Domain> domains = new List<Domain>();
+        private int currentDomain = 0;
 
         public static bool IssuedError {
             get { return Shell.IssuedErrorMessage != null; }
@@ -143,6 +153,11 @@ namespace CommandTerminal
             Shell = new CommandShell();
             History = new CommandHistory();
             Autocomplete = new CommandAutocomplete();
+
+            domains.Add(new Domain(
+                "General",
+                Shell.RunCommand
+            ));
 
             // Hook Unity log events
             Application.logMessageReceivedThreaded += HandleUnityLog;
@@ -274,8 +289,12 @@ namespace CommandTerminal
 
             GUILayout.BeginHorizontal();
 
-            if (GUILayout.Button(domain == Domain.Engine ? "[c#]" : "[lua]", input_style, GUILayout.Width(Screen.width / 10))) {
-                domain = domain == Domain.Engine ? Domain.LuaVM : Domain.Engine;
+            // Cycle through the available domains
+            if (GUILayout.Button(domains[currentDomain].identifier, input_style, GUILayout.Width(Screen.width / 10))) {
+                if ((currentDomain + 1) >= domains.Count)
+                    currentDomain = 0;
+                else
+                    currentDomain++;
             }
 
             if (InputCaret != "") {
@@ -349,13 +368,9 @@ namespace CommandTerminal
         }
 
         void EnterCommand() {
-            Log(TerminalLogType.Input, "{0} | {1}", domain == Domain.Engine ? "c#" : "lua", command_text);
-            if (domain == Domain.Engine) {
-                Shell.RunCommand(command_text);
-            }
-            else if (domain == Domain.LuaVM) {
-                Log($"Lua: {command_text}");
-            }
+            var domain = domains[currentDomain];
+            Log(TerminalLogType.Input, "{0} | {1}", domain.identifier, command_text);
+            domain.command(command_text);
             History.Push(command_text);
 
             if (IssuedError) {
@@ -411,6 +426,17 @@ namespace CommandTerminal
                 case TerminalLogType.ShellMessage: return ShellColor;
                 default: return ErrorColor;
             }
+        }
+
+        public bool RegisterDomain(string identifier, UnityAction<string> command) {
+            foreach(var domain in domains) {
+                if (identifier == domain.identifier) {
+                    Debug.LogWarning($"The domain with the identifier '{identifier} already exists.'");
+                    return false;
+                }
+            }
+            domains.Add(new Domain(identifier, command));
+            return true;
         }
     }
 }
